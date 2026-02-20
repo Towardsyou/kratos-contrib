@@ -1,5 +1,5 @@
 {
-  "otel/grafana": "0.0.0",
-  "auth/supabase": "0.0.0",
-  "swagger/ui": "0.0.0"
+  "otel/grafana": "0.1.0",
+  "auth/supabase": "0.1.0",
+  "swagger/ui": "0.1.0"
 }
