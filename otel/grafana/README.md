@@ -1,6 +1,7 @@
 # otel/grafana
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/towardsyou/kratos-contrib/otel/grafana.svg)](https://pkg.go.dev/github.com/towardsyou/kratos-contrib/otel/grafana)
+[![Go Report Card](https://goreportcard.com/badge/github.com/towardsyou/kratos-contrib/otel/grafana)](https://goreportcard.com/report/github.com/towardsyou/kratos-contrib/otel/grafana)
 
 OpenTelemetry plugin for [Kratos](https://github.com/go-kratos/kratos) that exports **traces**, **logs**, and **metrics** to [Grafana Cloud](https://grafana.com/products/cloud/) via OTLP/HTTP.
 
