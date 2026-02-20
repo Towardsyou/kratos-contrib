@@ -1,6 +1,6 @@
 module github.com/towardsyou/kratos-contrib/auth/supabase
 
-go 1.25.3
+go 1.23
 
 require (
 	github.com/go-kratos/kratos/v2 v2.9.2
