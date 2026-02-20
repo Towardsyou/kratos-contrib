@@ -2,12 +2,12 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/towardsyou/kratos-contrib/auth/supabase.svg)](https://pkg.go.dev/github.com/towardsyou/kratos-contrib/auth/supabase)
 
-Supabase JWT authentication middleware for [Kratos](https://github.com/go-kratos/kratos).
+Supabase authentication plugin for [Kratos](https://github.com/go-kratos/kratos).
 
-- Validates `Authorization: Bearer <token>` using your Supabase JWT secret (HMAC)
-- Injects authenticated user info into `context.Context`
-- Supports per-operation whitelist (public endpoints bypass auth)
-- Provides a `NewSupabaseClient` factory for use in the data layer
+- **`POST /oauth/token`** — RFC 6749 §4.3 Resource Owner Password Credentials grant (`application/x-www-form-urlencoded`)
+- **JWT middleware** — validates `Authorization: Bearer <token>`, injects `*Info` into context
+- **Sign-up** — creates a new user via Supabase Auth
+- **Whitelist matcher** — lets public endpoints bypass the JWT middleware
 
 ## Installation
 
@@ -25,42 +25,90 @@ import (
 )
 
 cfg := supabaseauth.Config{
-    JWTSecret:   "<your-jwt-secret>",   // Supabase → Settings → API → JWT Secret
+    JWTSecret:   "<jwt-secret>",        // Supabase → Settings → API → JWT Secret
     SupabaseURL: "https://xxx.supabase.co",
     SupabaseKey: "sb_publishable_xxx",
-    Whitelist: []string{
-        "/user.v1.UserService/Login",
-        "/user.v1.UserService/Register",
-    },
+    Whitelist:   []string{"/oauth/token", "/user.v1.UserService/Register"},
 }
+
+authClient, _ := supabaseauth.NewAuthClient(cfg)
 
 httpSrv := kratoshttp.NewServer(
     kratoshttp.Middleware(
-        selector.Server(
-            supabaseauth.NewAuthMiddleware(cfg),
-        ).Match(
-            supabaseauth.NewWhitelistMatcher(cfg.Whitelist),
-        ).Build(),
+        selector.Server(supabaseauth.NewAuthMiddleware(cfg)).
+            Match(supabaseauth.NewWhitelistMatcher(cfg.Whitelist)).Build(),
     ),
 )
 
-// In your data layer:
-client, err := supabaseauth.NewSupabaseClient(cfg)
+// Register the RFC 6749 token endpoint.
+httpSrv.Handle("/oauth/token", supabaseauth.TokenHandler(authClient))
 ```
 
-## Accessing the Authenticated User
+## Token Endpoint — RFC 6749
+
+### Request
+
+```
+POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&username=user%40example.com&password=secret
+```
+
+| Field        | Required | Description                              |
+|--------------|----------|------------------------------------------|
+| `grant_type` | yes      | must be `password`                       |
+| `username`   | yes      | user's email address                     |
+| `password`   | yes      |                                          |
+| `scope`      | no       | accepted but ignored (Supabase manages scopes) |
+
+### Success Response — HTTP 200
+
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "refresh_token": "v1.xxx"
+}
+```
+
+### Error Response — RFC 6749 §5.2
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Invalid login credentials"
+}
+```
+
+| HTTP status | `error`                  | When                                      |
+|-------------|--------------------------|-------------------------------------------|
+| 400         | `invalid_request`        | Missing or malformed parameters           |
+| 400         | `unsupported_grant_type` | `grant_type` is not `password`            |
+| 415         | `invalid_request`        | Content-Type is not `application/x-www-form-urlencoded` |
+| 401         | `invalid_grant`          | Wrong credentials                         |
+
+## Sign Up
 
 ```go
-func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileReq) (*pb.GetProfileResp, error) {
-    info, ok := supabaseauth.FromContext(ctx)
-    if !ok {
-        return nil, errors.Unauthorized("UNAUTHORIZED", "missing auth info")
-    }
-    // info.UserID   — uuid.UUID
-    // info.Username — string
-    // info.Claims   — jwt.MapClaims (full token payload)
-    ...
-}
+user, err := authClient.SignUp(ctx, supabaseauth.SignUpRequest{
+    Email:    "user@example.com",
+    Password: "secret",
+    Username: "alice",
+})
+// user.ID, user.Email, user.Username
+```
+
+## JWT Middleware
+
+Protected handlers receive the authenticated user via context:
+
+```go
+info, ok := supabaseauth.FromContext(ctx)
+// info.UserID   — uuid.UUID
+// info.Username — string
+// info.Claims   — jwt.MapClaims (full token payload)
 ```
 
 ## Configuration Reference
@@ -70,4 +118,4 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileReq) (*p
 | `JWTSecret`   | `string`   | HMAC secret from Supabase dashboard (Settings → API).        |
 | `SupabaseURL` | `string`   | Project URL, e.g. `https://xxx.supabase.co`.                 |
 | `SupabaseKey` | `string`   | Publishable (anon) API key.                                  |
-| `Whitelist`   | `[]string` | Operations that skip JWT validation (login, register, etc.). |
+| `Whitelist`   | `[]string` | Operations that skip JWT validation (token endpoint, etc.).  |

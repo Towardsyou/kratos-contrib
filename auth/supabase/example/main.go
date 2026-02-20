@@ -1,4 +1,4 @@
-// Example shows how to wire the supabase auth middleware into a Kratos HTTP/gRPC server.
+// Example shows how to wire the supabase auth plugin into a Kratos application.
 package main
 
 import (
@@ -17,19 +17,32 @@ func main() {
 		SupabaseURL: "https://xxx.supabase.co",
 		SupabaseKey: "sb_publishable_xxx",
 		Whitelist: []string{
-			"/user.v1.UserService/Login",
+			// The token endpoint and registration are public.
+			"/oauth/token",
 			"/user.v1.UserService/Register",
 		},
 	}
 
-	// Create Supabase client (for use in repositories/data layer).
-	client, err := supabaseauth.NewSupabaseClient(cfg)
+	authClient, err := supabaseauth.NewAuthClient(cfg)
 	if err != nil {
 		panic(err)
 	}
-	_ = client // pass to your data layer via DI
 
-	// Build the HTTP server with conditional JWT auth middleware.
+	// --- Sign up a new user ---
+	user, err := authClient.SignUp(context.Background(), supabaseauth.SignUpRequest{
+		Email:    "user@example.com",
+		Password: "secret",
+		Username: "alice",
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("registered: %s (%s)\n", user.Username, user.ID)
+
+	// --- HTTP server wiring ---
+	//
+	// TokenHandler exposes POST /oauth/token (RFC 6749 password grant).
+	// Protected routes use the JWT middleware; /oauth/token is in the whitelist.
 	httpSrv := kratoshttp.NewServer(
 		kratoshttp.Address(":8080"),
 		kratoshttp.Middleware(
@@ -40,13 +53,17 @@ func main() {
 			).Build(),
 		),
 	)
+
+	// Register the RFC 6749 token endpoint.
+	httpSrv.Handle("/oauth/token", supabaseauth.TokenHandler(authClient))
+
 	_ = httpSrv
 
-	// In a handler, retrieve the authenticated user from context:
+	// --- Inside a protected handler ---
 	exampleHandler := func(ctx context.Context) {
 		info, ok := supabaseauth.FromContext(ctx)
 		if !ok {
-			fmt.Println("no auth info (public endpoint)")
+			fmt.Println("no auth info")
 			return
 		}
 		fmt.Printf("user id: %s, username: %s\n", info.UserID, info.Username)
