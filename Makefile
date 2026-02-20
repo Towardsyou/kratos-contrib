@@ -1,4 +1,4 @@
-PLUGINS := otel/grafana auth/supabase
+PLUGINS := otel/grafana auth/supabase swagger/ui
 
 .PHONY: tidy test lint all
 

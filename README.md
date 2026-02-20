@@ -7,7 +7,8 @@ A collection of Kratos plugins published as a monorepo. Each plugin has its own 
 | Plugin | Import Path | Description |
 |--------|-------------|-------------|
 | [otel/grafana](./otel/grafana) | `github.com/towardsyou/kratos-contrib/otel/grafana` | OpenTelemetry (Trace / Log / Metric) for Grafana Cloud |
-| [auth/supabase](./auth/supabase) | `github.com/towardsyou/kratos-contrib/auth/supabase` | Supabase JWT authentication middleware |
+| [auth/supabase](./auth/supabase) | `github.com/towardsyou/kratos-contrib/auth/supabase` | Supabase JWT authentication middleware + RFC 6749 token endpoint |
+| [swagger/ui](./swagger/ui) | `github.com/towardsyou/kratos-contrib/swagger/ui` | Serve OpenAPI spec + Swagger UI |
 
 ## Usage
 

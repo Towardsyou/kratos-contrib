@@ -16,6 +16,7 @@ jobs:
         plugin:
           - otel/grafana
           - auth/supabase
+          - swagger/ui
 
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +43,7 @@ jobs:
         plugin:
           - otel/grafana
           - auth/supabase
+          - swagger/ui
 
     steps:
       - uses: actions/checkout@v4
