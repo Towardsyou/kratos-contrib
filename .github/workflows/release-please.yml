@@ -18,3 +18,4 @@ jobs:
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-pull-request: true
+          include-component-in-tag: true
