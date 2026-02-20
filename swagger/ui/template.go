@@ -2,7 +2,7 @@ package swaggerui
 
 // swaggerUIHTML is the Swagger UI page template.
 // Assets (CSS, JS) are loaded from the unpkg CDN so no local files are needed.
-// Template variables: .Title, .SpecURL, .CDNVersion
+// Template variables: .Title, .SpecURL, .CDNVersion, .OAuth2ClientID, .OAuth2Scopes
 const swaggerUIHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +31,17 @@ const swaggerUIHTML = `<!DOCTYPE html>
         ],
         plugins: [SwaggerUIBundle.plugins.DownloadUrl],
         layout: "BaseLayout",
-        tryItOutEnabled: true
+        tryItOutEnabled: true,
+        // oauth2RedirectUrl is required for authorization_code flow;
+        // harmless for password grant (Supabase).
+        oauth2RedirectUrl: "https://unpkg.com/swagger-ui-dist@{{.CDNVersion}}/oauth2-redirect.html",
+        {{- if .OAuth2ClientID}}
+        initOAuth: {
+          clientId: "{{.OAuth2ClientID}}",
+          scopes: "{{.OAuth2Scopes}}",
+          usePkceWithAuthorizationCodeGrant: false,
+        },
+        {{- end}}
       });
     };
   </script>

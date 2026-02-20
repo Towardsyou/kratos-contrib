@@ -7,10 +7,19 @@ info:
 servers:
   - url: http://localhost:8080
 
+# Apply bearerAuth globally; individual endpoints can override or remove it.
+security:
+  - bearerAuth: []
+
 paths:
   /oauth/token:
     post:
-      summary: OAuth2 Password Grant (RFC 6749)
+      summary: OAuth2 Password Grant (RFC 6749 §4.3)
+      description: |
+        Exchange username + password for a JWT access token.
+        This endpoint is public and does **not** require a Bearer token.
+      # This endpoint is public — override the global security requirement.
+      security: []
       requestBody:
         required: true
         content:
@@ -22,9 +31,11 @@ paths:
                 grant_type:
                   type: string
                   enum: [password]
+                  example: password
                 username:
                   type: string
                   format: email
+                  example: user@example.com
                 password:
                   type: string
                   format: password
@@ -48,7 +59,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/TokenError"
 
+  /api/me:
+    get:
+      summary: Get current user (example protected endpoint)
+      # Inherits global bearerAuth security requirement.
+      responses:
+        "200":
+          description: Current user info
+        "401":
+          description: Unauthorized
+
 components:
+  securitySchemes:
+    # Option 1 — paste a JWT directly into the Authorize dialog.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    # Option 2 — let Swagger UI call /oauth/token and manage the token automatically.
+    # Click "Authorize", enter your email as "username" and your password,
+    # then Swagger UI will obtain and attach the Bearer token on every request.
+    oauth2Password:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: /oauth/token
+          scopes: {}   # Supabase does not use scopes for password grant
+
   schemas:
     TokenResponse:
       type: object

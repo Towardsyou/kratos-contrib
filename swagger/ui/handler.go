@@ -27,8 +27,10 @@ const (
 )
 
 type config struct {
-	title      string
-	cdnVersion string
+	title          string
+	cdnVersion     string
+	oauth2ClientID string
+	oauth2Scopes   string
 }
 
 // Option configures the Swagger UI handler.
@@ -46,6 +48,22 @@ func WithTitle(title string) Option {
 // Example: swaggerui.WithCDNVersion("5.17.14")
 func WithCDNVersion(version string) Option {
 	return func(c *config) { c.cdnVersion = version }
+}
+
+// WithOAuth2 enables the Swagger UI "Authorize" dialog for OAuth2 flows.
+//
+// clientID is pre-filled in the Authorize dialog (pass "" if not needed,
+// as Supabase password grant does not require a client ID).
+// scopes is a space-separated list of default scopes (pass "" for none).
+//
+// When set, the UI also gains a pre-configured initOAuth block and an
+// oauth2RedirectUrl pointing to the swagger-ui-dist CDN redirect page,
+// which is required for authorization_code flows.
+func WithOAuth2(clientID, scopes string) Option {
+	return func(c *config) {
+		c.oauth2ClientID = clientID
+		c.oauth2Scopes = scopes
+	}
 }
 
 // UIHandler returns an http.Handler that serves the Swagger UI HTML page.
@@ -66,9 +84,11 @@ func UIHandler(specURL string, opts ...Option) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.Execute(w, map[string]string{
-			"Title":      cfg.title,
-			"SpecURL":    specURL,
-			"CDNVersion": cfg.cdnVersion,
+			"Title":          cfg.title,
+			"SpecURL":        specURL,
+			"CDNVersion":     cfg.cdnVersion,
+			"OAuth2ClientID": cfg.oauth2ClientID,
+			"OAuth2Scopes":   cfg.oauth2Scopes,
 		})
 	})
 }
