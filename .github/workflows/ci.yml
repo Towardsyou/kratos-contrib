@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (${{ matrix.plugin }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin:
+          - otel/grafana
+          - auth/supabase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.plugin }}/go.mod
+          cache-dependency-path: ${{ matrix.plugin }}/go.sum
+
+      - name: go test
+        working-directory: ${{ matrix.plugin }}
+        run: go test ./...
+
+      - name: go build
+        working-directory: ${{ matrix.plugin }}
+        run: go build ./...
+
+  lint:
+    name: Lint (${{ matrix.plugin }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin:
+          - otel/grafana
+          - auth/supabase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.plugin }}/go.mod
+          cache-dependency-path: ${{ matrix.plugin }}/go.sum
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: ${{ matrix.plugin }}
+          version: latest

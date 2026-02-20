@@ -1,0 +1,4 @@
+{
+  "otel/grafana": "0.0.0",
+  "auth/supabase": "0.0.0"
+}
