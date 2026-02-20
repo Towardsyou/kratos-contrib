@@ -1,6 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "16dd9f1b8bd9a9b74b2534c582f95297075649e4",
   "packages": {
     "otel/grafana": {
       "release-type": "go",
