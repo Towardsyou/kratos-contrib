@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: e2e_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: postgres
+    volumes:
+      - ./init_postgres.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gotrue:
+    image: supabase/gotrue:v2.86.0
+    container_name: e2e_gotrue
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "9999:9999"
+    environment:
+      GOTRUE_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long"
+      GOTRUE_DB_DRIVER: "postgres"
+      NAMESPACE: "auth"
+      DATABASE_URL: "postgres://supabase_auth_admin:root@postgres:5432/postgres"
+      API_EXTERNAL_URL: "http://localhost:9999"
+      GOTRUE_API_HOST: "0.0.0.0"
+      PORT: "9999"
+      GOTRUE_SITE_URL: "http://localhost:3000"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMS_AUTOCONFIRM: "true"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: "1000000"
+      GOTRUE_RATE_LIMIT_VERIFY: "1000000"
+      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: "1000000"
+      GOTRUE_SMTP_MAX_FREQUENCY: "1ns"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9999/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nginx:
+    image: nginx:alpine
+    container_name: e2e_nginx
+    depends_on:
+      gotrue:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/auth/v1/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

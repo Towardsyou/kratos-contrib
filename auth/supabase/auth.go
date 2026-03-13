@@ -16,10 +16,18 @@ type SignUpRequest struct {
 }
 
 // SignUpResponse contains the newly created user's identity.
+// When Supabase email auto-confirm is enabled the session fields are also populated,
+// so the caller can skip a separate login step.
 type SignUpResponse struct {
 	ID       uuid.UUID
 	Email    string
 	Username string
+
+	// Session fields — populated only when the project has email auto-confirm enabled.
+	AccessToken  string
+	TokenType    string
+	ExpiresIn    int
+	RefreshToken string
 }
 
 // AuthClient wraps a Supabase client and exposes auth operations.
@@ -39,6 +47,7 @@ func NewAuthClient(cfg Config) (*AuthClient, error) {
 
 // SignUp registers a new user via Supabase Auth.
 // The Username is stored in Supabase user_metadata under the key "name".
+// When email auto-confirm is enabled the returned response also carries session tokens.
 func (a *AuthClient) SignUp(_ context.Context, req SignUpRequest) (*SignUpResponse, error) {
 	resp, err := a.client.Auth.Signup(gotruetypes.SignupRequest{
 		Email:    req.Email,
@@ -52,9 +61,39 @@ func (a *AuthClient) SignUp(_ context.Context, req SignUpRequest) (*SignUpRespon
 	}
 
 	username, _ := resp.User.UserMetadata["name"].(string)
-	return &SignUpResponse{
+	out := &SignUpResponse{
 		ID:       resp.User.ID,
 		Email:    resp.User.Email,
 		Username: username,
-	}, nil
+	}
+
+	// Populate session fields when auto-confirm is on.
+	if resp.Session.AccessToken != "" {
+		out.AccessToken = resp.Session.AccessToken
+		out.TokenType = resp.Session.TokenType
+		out.ExpiresIn = resp.Session.ExpiresIn
+		out.RefreshToken = resp.Session.RefreshToken
+	}
+
+	return out, nil
+}
+
+// UpdatePassword changes the password for an authenticated user.
+// accessToken must be a valid Supabase access token for the user whose password is being changed.
+// This is also used to set a new password with a recovery token obtained from a password-reset email.
+func (a *AuthClient) UpdatePassword(_ context.Context, accessToken, newPassword string) error {
+	_, err := a.client.Auth.WithToken(accessToken).UpdateUser(gotruetypes.UpdateUserRequest{
+		Password: &newPassword,
+	})
+	return err
+}
+
+// RequestPasswordReset sends a password-reset email to the given address via Supabase Auth.
+// The email contains a magic link that, when followed, provides a short-lived recovery token.
+// The caller must then exchange that token for a new password using [UpdatePassword] (or the
+// HTTP ChangePasswordHandler with the recovery token as the Bearer credential).
+//
+// GoTrue rate-limits this endpoint to one email per 60 seconds by default.
+func (a *AuthClient) RequestPasswordReset(_ context.Context, email string) error {
+	return a.client.Auth.Recover(gotruetypes.RecoverRequest{Email: email})
 }

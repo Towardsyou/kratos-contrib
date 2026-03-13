@@ -17,9 +17,10 @@ func main() {
 		SupabaseURL: "https://xxx.supabase.co",
 		SupabaseKey: "sb_publishable_xxx",
 		Whitelist: []string{
-			// The token endpoint and registration are public.
+			// Public endpoints — skip JWT middleware.
 			"/oauth/token",
-			"/user.v1.UserService/Register",
+			"/auth/signup",
+			"/auth/forgot-password",
 		},
 	}
 
@@ -28,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	// --- Sign up a new user ---
+	// --- Sign up a new user via AuthClient directly ---
 	user, err := authClient.SignUp(context.Background(), supabaseauth.SignUpRequest{
 		Email:    "user@example.com",
 		Password: "secret",
@@ -38,11 +39,9 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("registered: %s (%s)\n", user.Username, user.ID)
+	// When email auto-confirm is enabled, user.AccessToken is already populated.
 
 	// --- HTTP server wiring ---
-	//
-	// TokenHandler exposes POST /oauth/token (RFC 6749 password grant).
-	// Protected routes use the JWT middleware; /oauth/token is in the whitelist.
 	httpSrv := kratoshttp.NewServer(
 		kratoshttp.Address(":8080"),
 		kratoshttp.Middleware(
@@ -54,8 +53,23 @@ func main() {
 		),
 	)
 
-	// Register the RFC 6749 token endpoint.
+	// POST /auth/signup  {"email","password","username"}  → 201 {id,email,...}
+	// Public — no JWT required.
+	httpSrv.Handle("/auth/signup", supabaseauth.SignUpHandler(authClient))
+
+	// POST /oauth/token  grant_type=password  → 200 {access_token,refresh_token,...}
+	// POST /oauth/token  grant_type=refresh_token  → 200 {access_token,refresh_token,...}
+	// Public — no JWT required.
 	httpSrv.Handle("/oauth/token", supabaseauth.TokenHandler(authClient))
+
+	// POST /auth/forgot-password  {"email":"..."}  → 200 (always, to prevent user enumeration)
+	// Public — no JWT required. Supabase sends a reset email with a recovery token.
+	httpSrv.Handle("/auth/forgot-password", supabaseauth.ForgotPasswordHandler(authClient))
+
+	// POST /auth/password  Authorization: Bearer <token_or_recovery_token>  {"new_password":"..."}  → 204
+	// Accepts both a regular access token (change password) and a recovery token from the reset email.
+	// Protected — JWT middleware validates the token.
+	httpSrv.Handle("/auth/password", supabaseauth.ChangePasswordHandler(authClient))
 
 	_ = httpSrv
 
