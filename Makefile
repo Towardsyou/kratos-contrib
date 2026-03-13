@@ -1,6 +1,6 @@
 PLUGINS := otel/grafana auth/supabase swagger/ui
 
-.PHONY: tidy test lint all e2e
+.PHONY: tidy test lint all e2e hooks
 
 all: tidy test lint
 
@@ -27,6 +27,12 @@ build:
 		echo "==> build $$p"; \
 		(cd $$p && go build ./...); \
 	done
+
+# hooks: install the pre-commit hook from .github/pre-commit into .git/hooks/.
+hooks:
+	cp .github/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	@echo "pre-commit hook installed"
 
 # e2e: spin up docker services, run all E2E tests, tear down regardless of outcome.
 # Prerequisites: docker with compose plugin.

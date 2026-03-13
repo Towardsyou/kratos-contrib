@@ -119,10 +119,10 @@ func handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request, client *Aut
 	}
 
 	writeTokenSuccess(w, TokenResponse{
-		AccessToken:  resp.Session.AccessToken,
-		TokenType:    strings.ToLower(resp.Session.TokenType),
-		ExpiresIn:    resp.Session.ExpiresIn,
-		RefreshToken: resp.Session.RefreshToken,
+		AccessToken:  resp.AccessToken,
+		TokenType:    strings.ToLower(resp.TokenType),
+		ExpiresIn:    resp.ExpiresIn,
+		RefreshToken: resp.RefreshToken,
 	})
 }
 
@@ -181,11 +181,7 @@ func SignUpHandler(client *AuthClient) http.Handler {
 			return
 		}
 
-		result, err := client.SignUp(r.Context(), SignUpRequest{
-			Email:    req.Email,
-			Password: req.Password,
-			Username: req.Username,
-		})
+		result, err := client.SignUp(r.Context(), SignUpRequest(req))
 		if err != nil {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return

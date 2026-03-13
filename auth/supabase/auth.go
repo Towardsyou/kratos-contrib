@@ -60,19 +60,19 @@ func (a *AuthClient) SignUp(_ context.Context, req SignUpRequest) (*SignUpRespon
 		return nil, err
 	}
 
-	username, _ := resp.User.UserMetadata["name"].(string)
+	username, _ := resp.UserMetadata["name"].(string)
 	out := &SignUpResponse{
-		ID:       resp.User.ID,
-		Email:    resp.User.Email,
+		ID:       resp.ID,
+		Email:    resp.Email,
 		Username: username,
 	}
 
 	// Populate session fields when auto-confirm is on.
-	if resp.Session.AccessToken != "" {
-		out.AccessToken = resp.Session.AccessToken
-		out.TokenType = resp.Session.TokenType
-		out.ExpiresIn = resp.Session.ExpiresIn
-		out.RefreshToken = resp.Session.RefreshToken
+	if resp.AccessToken != "" {
+		out.AccessToken = resp.AccessToken
+		out.TokenType = resp.TokenType
+		out.ExpiresIn = resp.ExpiresIn
+		out.RefreshToken = resp.RefreshToken
 	}
 
 	return out, nil

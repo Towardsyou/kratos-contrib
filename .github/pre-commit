@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# pre-commit hook — mirrors the CI lint + build jobs.
+#
+# Install (one-time):
+#   cp .github/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or let `make hooks` do it automatically.
+set -euo pipefail
+
+PLUGINS=(otel/grafana auth/supabase swagger/ui)
+
+echo "==> pre-commit: build"
+for p in "${PLUGINS[@]}"; do
+  echo "    go build $p"
+  (cd "$p" && go build ./...)
+done
+
+echo "==> pre-commit: lint"
+if ! command -v golangci-lint &>/dev/null; then
+  echo "    golangci-lint not found — skipping (install: https://golangci-lint.run/usage/install/)"
+else
+  for p in "${PLUGINS[@]}"; do
+    echo "    golangci-lint $p"
+    (cd "$p" && golangci-lint run ./...)
+  done
+fi
+
+echo "==> pre-commit: passed"
