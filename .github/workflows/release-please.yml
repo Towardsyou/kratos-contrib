@@ -1,11 +1,6 @@
 name: Release Please
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .release-please-manifest.json
   workflow_dispatch:
 
 permissions:
@@ -17,7 +12,7 @@ jobs:
     name: Run release-please
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v4.4.0
         id: release
         with:
           config-file: release-please-config.json
@@ -29,8 +24,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_TITLE=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.title')
           PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
           gh pr merge "$PR_NUMBER" --squash \
-            --subject "chore: ${PR_TITLE}" \
             --repo "${{ github.repository }}"
