@@ -1,0 +1,17 @@
+page:
+  url: "${UPLOAD_BASE_URL}/"
+  output: midscene_run/upload-original.json
+agent:
+  reportFileName: upload-original
+tasks:
+  - name: 上传原图
+    flow:
+      - aiTap: 点击「以测试用户登录」
+      - aiWaitFor: 页面显示「已登录 · 测试用户」
+      - aiTap: 点击「选择文件」打开文件选择器
+        fileChooserAccept: ./fixtures/山景.jpg
+      - aiAssert: 「上传原图」区域显示已选文件「山景.jpg」
+      - aiTap: 点击「上传文件」
+      - aiWaitFor: 页面显示「上传成功：山景.jpg」，并且「我的文件」中出现「山景.jpg」
+      - aiTap: 点击「我的文件」中第一条「山景.jpg」旁边的「下载原文件」
+      - aiAssert: 「我的文件」中能看到「山景.jpg」，并显示「已下载 山景.jpg」

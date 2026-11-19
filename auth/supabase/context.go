@@ -9,7 +9,7 @@ import (
 
 // Info holds the authenticated user's identity extracted from the JWT claims.
 type Info struct {
-	// UserID is the Supabase user UUID (from "sub" or "user_id" claim).
+	// UserID is the Supabase user UUID (from "sub", or the legacy "user_id" claim).
 	UserID uuid.UUID
 
 	// Username is the display name (from "username" claim), if present.

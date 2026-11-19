@@ -17,3 +17,12 @@ type Config struct {
 	// Example: []string{"/user.v1.UserService/Login", "/user.v1.UserService/Register"}
 	Whitelist []string
 }
+
+// JWTConfig sets the verification policy for NewJWTMiddleware.
+type JWTConfig struct {
+	Algorithm string // Exact signing algorithm (HS256, HS384, HS512, ES256 or RS256).
+	Issuer    string // Exact Supabase Auth issuer, e.g. https://project.supabase.co/auth/v1.
+	Audience  string // Usually "authenticated".
+	Secret    string // Required for HMAC verification.
+	JWKSURL   string // For asymmetric verification. Defaults to Issuer + /.well-known/jwks.json.
+}

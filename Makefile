@@ -1,29 +1,32 @@
-PLUGINS := otel/grafana auth/supabase swagger/ui
+PLUGINS := otel/grafana auth/supabase swagger/ui storage/s3
+MODULES := $(PLUGINS) examples/upload
 
-.PHONY: tidy test lint all e2e hooks
+export GOWORK := off
+
+.PHONY: all tidy test lint build e2e e2e-upload hooks
 
 all: tidy test lint
 
 tidy:
-	@for p in $(PLUGINS); do \
+	@set -e; for p in $(MODULES); do \
 		echo "==> tidy $$p"; \
 		(cd $$p && go mod tidy); \
 	done
 
 test:
-	@for p in $(PLUGINS); do \
+	@set -e; for p in $(MODULES); do \
 		echo "==> test $$p"; \
 		(cd $$p && go test ./...); \
 	done
 
 lint:
-	@for p in $(PLUGINS); do \
+	@set -e; for p in $(PLUGINS); do \
 		echo "==> lint $$p"; \
 		(cd $$p && golangci-lint run ./...); \
 	done
 
 build:
-	@for p in $(PLUGINS); do \
+	@set -e; for p in $(MODULES); do \
 		echo "==> build $$p"; \
 		(cd $$p && go build ./...); \
 	done
@@ -42,3 +45,6 @@ e2e:
 	  STATUS=$$?; \
 	  cd .. && docker compose -f e2e/docker-compose.yml down; \
 	  exit $$STATUS
+
+e2e-upload:
+	sh examples/upload/scripts/with-compose.sh

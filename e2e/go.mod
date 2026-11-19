@@ -3,7 +3,6 @@ module github.com/towardsyou/kratos-contrib/e2e
 go 1.24.0
 
 require (
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/towardsyou/kratos-contrib/auth/supabase v0.0.0
 	github.com/towardsyou/kratos-contrib/otel/grafana v0.0.0
@@ -13,6 +12,7 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/form/v4 v4.2.0 // indirect

@@ -1,0 +1,71 @@
+services:
+  minio:
+    image: pgsty/minio@sha256:00c404465c4e7c4fd716d98caec2928e9e0f82c3548615662fdd3866ea9a28c0
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: upload-demo
+      MINIO_ROOT_PASSWORD: local-upload-demo-password
+      MINIO_API_CORS_ALLOW_ORIGIN: http://127.0.0.1:${UPLOAD_HTTP_PORT:-8080}
+    ports:
+      - "127.0.0.1:${UPLOAD_S3_PORT:-9000}:9000"
+    volumes:
+      - objects:/data
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/9000
+          printf 'GET /minio/health/ready HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n' >&3
+          read -r -u 3 response
+          [[ "$$response" == HTTP/*" 200 "* ]]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  bucket:
+    image: amazon/aws-cli:2.31.28
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: upload-demo
+      AWS_SECRET_ACCESS_KEY: local-upload-demo-password
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://minio:9000
+      AWS_PAGER: ""
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        aws s3api head-bucket --bucket uploads || aws s3api create-bucket --bucket uploads
+        aws s3api delete-bucket-policy --bucket uploads
+  app:
+    build:
+      context: ../..
+      dockerfile: examples/upload/Dockerfile
+    depends_on:
+      bucket:
+        condition: service_completed_successfully
+    environment:
+      UPLOAD_HTTP_ADDR: ":8080"
+      UPLOAD_DEMO_LOGIN: "true"
+      UPLOAD_JWT_ISSUER: http://127.0.0.1:${UPLOAD_HTTP_PORT:-8080}/demo
+      UPLOAD_JWT_SECRET: local-demo-signing-secret-for-upload-example
+      UPLOAD_DB_PATH: /data/uploads.db
+      UPLOAD_S3_ENDPOINT: http://minio:9000
+      UPLOAD_S3_PUBLIC_ENDPOINT: http://127.0.0.1:${UPLOAD_S3_PORT:-9000}
+      UPLOAD_S3_ACCESS_KEY_ID: upload-demo
+      UPLOAD_S3_SECRET_KEY: local-upload-demo-password
+    ports:
+      - "127.0.0.1:${UPLOAD_HTTP_PORT:-8080}:8080"
+    volumes:
+      - records:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  objects:
+  records:

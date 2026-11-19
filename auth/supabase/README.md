@@ -196,6 +196,21 @@ info, ok := supabaseauth.FromContext(ctx)
 // info.Claims   — jwt.MapClaims (full token payload)
 ```
 
+Use `NewJWTMiddleware` for Supabase projects with an explicit verification policy.
+
+```go
+verify, err := supabaseauth.NewJWTMiddleware(supabaseauth.JWTConfig{
+    Algorithm: "ES256", // Or RS256, depending on the project signing key.
+    Issuer:    "https://your-project.supabase.co/auth/v1",
+    Audience:  "authenticated",
+})
+// Handle err, then install verify as Kratos middleware.
+```
+
+The strict middleware requires the configured algorithm, issuer and audience, an expiration, and a non-nil UUID in `sub`. ES256 and RS256 select the public key using the token's `kid` and the configured JWKS URL. The default is `<issuer>/.well-known/jwks.json`. Set `Algorithm: "HS256"` and `Secret` for a local HMAC issuer. [Supabase JWT signing keys](https://supabase.com/docs/guides/auth/signing-keys)
+
+`NewAuthMiddleware(Config)` continues to accept legacy HMAC tokens. It accepts a valid `user_id` when `sub` is absent. Both middleware constructors reject protected requests with missing credentials or an invalid user UUID.
+
 ## Configuration Reference
 
 | Field         | Type       | Description                                                  |
