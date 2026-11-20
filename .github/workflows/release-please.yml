@@ -31,12 +31,46 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-release: true
 
-      - name: Auto-merge release PR
-        if: steps.prepare.outputs.pr
+      - name: Auto-merge release PR and wait for it to merge
+        id: merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_PR_NUMBER: ${{ fromJSON(steps.prepare.outputs.pr).number }}
-        run: gh pr merge "$RELEASE_PR_NUMBER" --squash --repo "$GITHUB_REPOSITORY"
+          PREPARED_PR: ${{ steps.prepare.outputs.pr }}
+        run: |
+          if [[ -n "$PREPARED_PR" ]]; then
+            release_pr=$(jq -er '.number' <<< "$PREPARED_PR")
+          else
+            # An unchanged release PR is omitted from Prepare's output on a rerun.
+            release_pr=$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f base=main -f state=open -f head="$GITHUB_REPOSITORY_OWNER:release-please--branches--main" \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and any(.labels[]; .name == "autorelease: pending")) | .number')
+          fi
+          if [[ -z "$release_pr" ]]; then
+            exit 0
+          fi
+          echo "number=$release_pr" >> "$GITHUB_OUTPUT"
+
+          pr=$(gh pr view "$release_pr" --repo "$GITHUB_REPOSITORY" --json state,autoMergeRequest)
+          if jq -e '.state == "OPEN" and .autoMergeRequest == null' <<< "$pr" >/dev/null; then
+            gh pr merge "$release_pr" --auto --squash --repo "$GITHUB_REPOSITORY"
+          fi
+          for attempt in {1..60}; do
+            state=$(gh pr view "$release_pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')
+            case "$state" in
+              MERGED) exit 0 ;;
+              OPEN)
+                if [[ "$attempt" -lt 60 ]]; then
+                  sleep 15
+                fi
+                ;;
+              *)
+                echo "::error::Release PR #$release_pr is in state $state"
+                exit 1
+                ;;
+            esac
+          done
+          echo "::error::Release PR #$release_pr has not merged. Check its required CI and rerun once it can merge."
+          exit 1
 
       - name: Publish merged releases
         uses: googleapis/release-please-action@v4.4.0
@@ -48,7 +82,7 @@ jobs:
           skip-github-pull-request: true
 
       - name: Verify release was published
-        if: steps.prepare.outputs.pr && steps.publish.outputs.releases_created != 'true'
+        if: steps.merge.outputs.number && steps.publish.outputs.releases_created != 'true'
         run: |
           echo "::error::The release PR was merged but no release was created. Re-run to publish the pending release."
           exit 1
