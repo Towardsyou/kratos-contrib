@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { parseYamlScript } from "@midscene/core/yaml";
 import { chromium } from "@playwright/test";
@@ -25,7 +25,7 @@ const scenes = files
   });
 
 const dir = "midscene_run";
-const summaryPath = join(dir, "results.json");
+const summaryPath = resolve(dir, "results.json");
 mkdirSync(dir, { recursive: true });
 const missing = [
   "MIDSCENE_MODEL_BASE_URL", "MIDSCENE_MODEL_API_KEY", "MIDSCENE_MODEL_NAME", "MIDSCENE_MODEL_FAMILY",
@@ -46,13 +46,21 @@ if (!skipReason) {
   results = JSON.parse(readFileSync(summaryPath, "utf8")).results;
 }
 
+const sceneResults = scenes.map(({ file, name }) => ({
+  name,
+  result: results.find(({ script }) => basename(script) === basename(file)),
+}));
+if (!skipReason && process.exitCode === 0 && sceneResults.some(({ result }) => result?.resultType !== "success")) {
+  console.error("Midscene 退出成功，但结果文件缺少已通过的场景。");
+  process.exitCode = 1;
+}
+
 const labels = { success: "通过", failed: "失败", partialFailed: "部分失败", notExecuted: "未运行" };
 const summary = [
   "## 上传示例 Midscene 结果",
   "",
   ...(skipReason ? [skipReason, ""] : []),
-  ...scenes.map(({ file, name }) => {
-    const result = results.find(({ script }) => basename(script) === basename(file));
+  ...sceneResults.map(({ name, result }) => {
     const label = labels[result?.resultType] ?? "未产生结果";
     return "- " + name + " — " + label + (result?.report ? "（`" + result.report + "`）" : "");
   }),
