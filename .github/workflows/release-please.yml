@@ -12,21 +12,74 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
+
 jobs:
   release-please:
     name: Run release-please
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4.4.0
-        id: release
+      - name: Clear pending labels from rolled-back release PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pending_prs=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main \
+            --state merged --label 'autorelease: pending' --limit 200 \
+            --json number,mergeCommit --jq '.[] | [.number, .mergeCommit.oid] | @tsv')
+          if [[ -z "$pending_prs" ]]; then
+            exit 0
+          fi
+
+          while read -r number merge_sha; do
+            if [[ -z "$merge_sha" ]]; then
+              echo "::error::Release PR #$number has no merge commit SHA"
+              exit 1
+            fi
+            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/$merge_sha...main" --jq '.status')
+            case "$status" in
+              ahead|identical) ;;
+              behind|diverged)
+                echo "Clearing the pending label on PR #$number because $merge_sha is outside main history"
+                gh api --method DELETE \
+                  "repos/$GITHUB_REPOSITORY/issues/$number/labels/autorelease%3A%20pending" >/dev/null
+                ;;
+              *)
+                echo "::error::Unexpected comparison status for release PR #$number: $status"
+                exit 1
+                ;;
+            esac
+          done <<< "$pending_prs"
+
+      - name: Prepare release PR
+        uses: googleapis/release-please-action@v4.4.0
+        id: prepare
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-release: true
 
       - name: Auto-merge release PR
-        if: steps.release.outputs.pr
+        if: steps.prepare.outputs.pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          RELEASE_PR_NUMBER: ${{ fromJSON(steps.prepare.outputs.pr).number }}
         run: gh pr merge "$RELEASE_PR_NUMBER" --squash --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish merged releases
+        uses: googleapis/release-please-action@v4.4.0
+        id: publish
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-pull-request: true
+
+      - name: Verify release was published
+        if: steps.prepare.outputs.pr && steps.publish.outputs.releases_created != 'true'
+        run: |
+          echo "::error::The release PR was merged but no release was created. Re-run to publish the pending release."
+          exit 1
