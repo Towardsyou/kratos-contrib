@@ -115,6 +115,7 @@ jobs:
       - name: Install browser test tools
         run: |
           npm ci --ignore-scripts
+          npx --no-install midscene model verify --help
           npx playwright install --with-deps chromium
 
       - name: Run private-bucket tests, Playwright and Midscene
