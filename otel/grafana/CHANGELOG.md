@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3](https://github.com/Towardsyou/kratos-contrib/compare/otel/grafana-v0.1.2...otel/grafana/v0.1.3) (2026-11-20)
+
+
+### Features
+
+* migrate private object storage and upload example ([#5](https://github.com/Towardsyou/kratos-contrib/issues/5)) ([c538fc6](https://github.com/Towardsyou/kratos-contrib/commit/c538fc6a7dc97f185934ef3204969e20e81226fd))
+
+
+### Bug Fixes
+
+* **ci:** restore Go module release tags ([#6](https://github.com/Towardsyou/kratos-contrib/issues/6)) ([0a252ad](https://github.com/Towardsyou/kratos-contrib/commit/0a252ad813f789b8d4b6d4b9d2c515236a511c00))
+
 ## [0.1.2](https://github.com/Towardsyou/kratos-contrib/compare/d5bcddf516ba2735d710ae6e89d28333c8ffbd3c...d78da6f354f1a2ba15ba49eba5e44f882576f4c8) (2026-03-13)
 
 
