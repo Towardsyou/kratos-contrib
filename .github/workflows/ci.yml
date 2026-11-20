@@ -80,7 +80,7 @@ jobs:
         run: make e2e
 
   upload-e2e:
-    name: Private upload and browser scenarios
+    name: Upload E2E Tests
     runs-on: ubuntu-24.04
     defaults:
       run:

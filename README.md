@@ -34,10 +34,13 @@ Module changes must follow [Conventional Commits](https://www.conventionalcommit
 
 ## Releases
 
-Run **Release Please** manually from the GitHub Actions tab on `main`.
+Run **Release Please** once from the GitHub Actions tab on `main`. The
+workflow prepares a release PR and enables squash auto-merge. Once GitHub
+confirms the PR has merged, the workflow tags the separate release commit and
+creates the corresponding GitHub Releases.
 
-1. Run it to prepare a release PR. The workflow squash-merges the generated version and changelog updates into a separate release commit.
-2. Run it again to tag the merged release commit and publish the corresponding GitHub Releases.
+If GitHub asks for approval to run CI on the bot's PR, approve its workflow runs
+so auto-merge can proceed. A rerun can resume an open or already merged release PR.
 
 Go module tags use the module directory followed by `/v<version>`, such as
 `auth/supabase/v0.1.3`. Use `go list -m -versions github.com/towardsyou/kratos-contrib/auth/supabase`
