@@ -22,37 +22,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Clear pending labels from rolled-back release PRs
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          pending_prs=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main \
-            --state merged --label 'autorelease: pending' --limit 200 \
-            --json number,mergeCommit --jq '.[] | [.number, .mergeCommit.oid] | @tsv')
-          if [[ -z "$pending_prs" ]]; then
-            exit 0
-          fi
-
-          while read -r number merge_sha; do
-            if [[ -z "$merge_sha" ]]; then
-              echo "::error::Release PR #$number has no merge commit SHA"
-              exit 1
-            fi
-            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/$merge_sha...main" --jq '.status')
-            case "$status" in
-              ahead|identical) ;;
-              behind|diverged)
-                echo "Clearing the pending label on PR #$number because $merge_sha is outside main history"
-                gh api --method DELETE \
-                  "repos/$GITHUB_REPOSITORY/issues/$number/labels/autorelease%3A%20pending" >/dev/null
-                ;;
-              *)
-                echo "::error::Unexpected comparison status for release PR #$number: $status"
-                exit 1
-                ;;
-            esac
-          done <<< "$pending_prs"
-
       - name: Prepare release PR
         uses: googleapis/release-please-action@v4.4.0
         id: prepare
