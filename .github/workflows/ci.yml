@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  GOWORK: "off"
+
 jobs:
   build:
     name: Build (${{ matrix.plugin }})
@@ -17,6 +20,8 @@ jobs:
           - otel/grafana
           - auth/supabase
           - swagger/ui
+          - storage/s3
+          - examples/upload
 
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +35,10 @@ jobs:
         working-directory: ${{ matrix.plugin }}
         run: go build ./...
 
+      - name: go test
+        working-directory: ${{ matrix.plugin }}
+        run: go test -count=1 ./...
+
   lint:
     name: Lint (${{ matrix.plugin }})
     runs-on: ubuntu-latest
@@ -40,6 +49,7 @@ jobs:
           - otel/grafana
           - auth/supabase
           - swagger/ui
+          - storage/s3
 
     steps:
       - uses: actions/checkout@v4
@@ -68,3 +78,75 @@ jobs:
 
       - name: make e2e
         run: make e2e
+
+  upload-e2e:
+    name: Private upload and browser scenarios
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: examples/upload
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: examples/upload/go.mod
+          cache-dependency-path: examples/upload/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: examples/upload/package-lock.json
+
+      - name: Verify generated files
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/protoc.zip" \
+            https://github.com/protocolbuffers/protobuf/releases/download/v29.3/protoc-29.3-linux-x86_64.zip
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
+          sh scripts/generate.sh
+          git diff --exit-code -- api
+          sh scripts/generate.sh
+          git diff --exit-code -- api
+          test -z "$(git status --porcelain --untracked-files=all -- api)"
+
+      - name: Install browser test tools
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+
+      - name: Run private-bucket tests, Playwright and Midscene
+        env:
+          MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+          MIDSCENE_MODEL_BASE_URL: ${{ vars.MIDSCENE_MODEL_BASE_URL }}
+          MIDSCENE_MODEL_NAME: ${{ vars.MIDSCENE_MODEL_NAME }}
+          MIDSCENE_MODEL_FAMILY: ${{ vars.MIDSCENE_MODEL_FAMILY }}
+        run: |
+          sh scripts/with-compose.sh sh -c '
+            status=0
+            go test -tags=e2e -count=1 -v ./... || status=1
+            npm run test:browser || status=1
+            npm run midscene || status=1
+            exit "$status"
+          '
+
+      - name: Save Midscene reports and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-midscene
+          path: |
+            examples/upload/midscene_run/report/
+            examples/upload/midscene_run/*.json
+            examples/upload/midscene_run/summary.md
+          if-no-files-found: ignore
+
+      - name: Save Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-playwright
+          path: examples/upload/playwright-report/
+          if-no-files-found: ignore

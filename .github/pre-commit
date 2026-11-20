@@ -8,10 +8,12 @@
 # Or let `make hooks` do it automatically.
 set -euo pipefail
 
-PLUGINS=(otel/grafana auth/supabase swagger/ui)
+export GOWORK=off
+PLUGINS=(otel/grafana auth/supabase swagger/ui storage/s3)
+MODULES=("${PLUGINS[@]}" examples/upload)
 
 echo "==> pre-commit: build"
-for p in "${PLUGINS[@]}"; do
+for p in "${MODULES[@]}"; do
   echo "    go build $p"
   (cd "$p" && go build ./...)
 done

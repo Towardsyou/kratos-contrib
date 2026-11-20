@@ -1,0 +1,15 @@
+page:
+  url: "${UPLOAD_BASE_URL}/"
+  output: midscene_run/guest-upload.json
+agent:
+  reportFileName: guest-upload
+tasks:
+  - name: 未登录时上传
+    flow:
+      - aiAssert: 页面显示当前身份是「访客」
+      - aiTap: 点击「选择文件」打开文件选择器
+        fileChooserAccept: ./fixtures/山景.jpg
+      - aiAssert: 「上传原图」区域显示已选文件「山景.jpg」
+      - aiTap: 点击「上传文件」
+      - aiWaitFor: 上传区域显示「请先登录再继续。」
+      - aiAssert: 页面显示「请先登录再继续。」，上传区域没有「上传成功」提示

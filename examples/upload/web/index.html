@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>原图上传示例</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>原图上传示例</h1>
+      <div class="session">
+        <span id="identity">访客</span>
+        <button type="button" id="login">以测试用户登录</button>
+        <button type="button" id="logout" hidden>退出登录</button>
+      </div>
+    </header>
+    <section aria-labelledby="upload-title">
+      <h2 id="upload-title">上传原图</h2>
+      <form id="upload">
+        <input type="file" id="file" aria-label="要上传的文件" hidden>
+        <button type="button" id="choose">选择文件</button>
+        <span id="selected">未选择文件</span>
+        <button type="submit" id="submit">上传文件</button>
+      </form>
+      <p id="upload-status" class="status" role="status"></p>
+    </section>
+    <section aria-labelledby="files-title">
+      <div class="heading">
+        <h2 id="files-title">我的文件</h2>
+        <button type="button" id="refresh">刷新页面</button>
+      </div>
+      <p id="file-status" role="status">登录后查看文件列表。</p>
+      <ul id="files" aria-label="我的文件列表"></ul>
+      <p id="download-status" class="status" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

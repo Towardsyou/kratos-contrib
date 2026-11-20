@@ -113,14 +113,19 @@ func InitTracerProvider(ctx context.Context, serviceName, serviceVersion string,
 // InitLoggerProvider creates an OTel LoggerProvider that exports logs via
 // OTLP/HTTP to Grafana Loki.
 //
-// When cfg.Endpoint is empty the provider is still returned but no OTLP
-// export is configured; callers can still use NewLogger with a nil provider.
+// An empty endpoint returns a provider without processors. NewLogger
+// still writes to stdout.
 //
 // Returns the provider and a shutdown function.
 func InitLoggerProvider(ctx context.Context, serviceName, serviceVersion string, cfg LoggerConfig) (*sdklog.LoggerProvider, func(context.Context) error, error) {
 	res, err := newResource(ctx, serviceName, serviceVersion)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if cfg.Endpoint == "" {
+		lp := sdklog.NewLoggerProvider(sdklog.WithResource(res))
+		return lp, lp.Shutdown, nil
 	}
 
 	opts := []otlploghttp.Option{

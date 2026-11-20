@@ -1,0 +1,14 @@
+{
+  "name": "kratos-contrib-upload-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "playwright test",
+    "midscene": "node scripts/midscene.mjs"
+  },
+  "devDependencies": {
+    "@midscene/cli": "1.18.1",
+    "@midscene/core": "1.18.1",
+    "@playwright/test": "1.58.2"
+  }
+}
