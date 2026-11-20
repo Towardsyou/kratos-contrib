@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.2](https://github.com/Towardsyou/kratos-contrib/compare/auth/supabase-v0.1.1...auth/supabase-v0.1.2) (2026-03-13)
+## [0.1.2](https://github.com/Towardsyou/kratos-contrib/compare/d5bcddf516ba2735d710ae6e89d28333c8ffbd3c...d78da6f354f1a2ba15ba49eba5e44f882576f4c8) (2026-03-13)
 
 
 ### Features
@@ -15,7 +15,9 @@
 
 * fix lint and add lint to local pre commit ([117ca2d](https://github.com/Towardsyou/kratos-contrib/commit/117ca2dccbff2b01ff02e5b3592962500648f7f0))
 
-## [0.1.1](https://github.com/Towardsyou/kratos-contrib/compare/auth/supabase-v0.1.0...auth/supabase-v0.1.1) (2026-02-20)
+## [0.1.1](https://github.com/Towardsyou/kratos-contrib/compare/d5bcddf516ba2735d710ae6e89d28333c8ffbd3c...1853c39da83c758795ac60e260d7fd2775b9cb26) (2026-02-20)
+
+This version was prepared as a draft release.
 
 
 ### Features

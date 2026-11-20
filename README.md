@@ -24,13 +24,24 @@ go get github.com/towardsyou/kratos-contrib/auth/supabase@latest
 
 ## Contributing
 
-Commits must follow [Conventional Commits](https://www.conventionalcommits.org/):
+Module changes must follow [Conventional Commits](https://www.conventionalcommits.org/).
 
-- `fix: ...` → patch release
-- `feat: ...` → minor release
-- `feat!: ...` / `BREAKING CHANGE:` → major release
+| Change | Before 1.0.0 | From 1.0.0 |
+|--------|--------------|------------|
+| `fix:` | Patch | Patch |
+| `feat:` | Patch | Minor |
+| Breaking change marked with `!` or `BREAKING CHANGE:` | Minor | Major |
 
-Releases are created manually by running the **release-please** workflow from the GitHub Actions tab.
+## Releases
+
+Run **Release Please** manually from the GitHub Actions tab on `main`.
+
+1. Run it to prepare a release PR. The workflow squash-merges the generated version and changelog updates into a separate release commit.
+2. Run it again to tag the merged release commit and publish the corresponding GitHub Releases.
+
+Go module tags use the module directory followed by `/v<version>`, such as
+`auth/supabase/v0.1.3`. Use `go list -m -versions github.com/towardsyou/kratos-contrib/auth/supabase`
+to see the versions available to Go clients.
 
 ## License
 
